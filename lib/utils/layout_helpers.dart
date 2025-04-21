@@ -1,31 +1,32 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/evento.dart';
-import '../models/eventos_provider.dart';
+import '../models/vuelo/vuelo.dart';
+import '../providers/vuelo_provider.dart';
 
 List<double> calcularAnchosColumnas(BuildContext context, List<String> columnas, double screenWidth) {
   return columnas.map((col) {
-    final eventosCol = context.read<EventosProvider>().eventos.where((e) => e.posicion == col).toList();
+    final vuelosCol = context.read<VueloProvider>().vuelos
+        .where((v) => v.posicion == col)
+        .toList();
 
-    if (eventosCol.isEmpty) {
+    if (vuelosCol.isEmpty) {
       final baseWidth = screenWidth / columnas.length;
-      debugPrint('📏 Columna $col → sin eventos → ancho base: ${baseWidth.toStringAsFixed(2)}');
       return baseWidth;
     }
 
-    final pistas = <List<Evento>>[];
-    for (final evento in eventosCol) {
+    final pistas = <List<Vuelo>>[];
+    for (final vuelo in vuelosCol) {
       bool asignado = false;
       for (final pista in pistas) {
-        if (!pista.any((e) => seSuperponen(e, evento))) {
-          pista.add(evento);
+        if (!pista.any((v) => seSuperponen(v, vuelo))) {
+          pista.add(vuelo);
           asignado = true;
           break;
         }
       }
       if (!asignado) {
-        pistas.add([evento]);
+        pistas.add([vuelo]);
       }
     }
 
@@ -39,11 +40,14 @@ List<double> calcularAnchosColumnas(BuildContext context, List<String> columnas,
   }).toList();
 }
 
-bool seSuperponen(Evento a, Evento b) {
-  final aInicio = a.inicio.hour * 60 + a.inicio.minute;
-  final aFin = a.fin.hour * 60 + a.fin.minute;
-  final bInicio = b.inicio.hour * 60 + b.inicio.minute;
-  final bFin = b.fin.hour * 60 + b.fin.minute;
+bool seSuperponen(Vuelo a, Vuelo b) {
+  final aInicio = a.horaLlegada.hour * 60 + a.horaLlegada.minute;
+  final aFin = a.horaSalida.hour * 60 + a.horaSalida.minute;
+  final bInicio = b.horaLlegada.hour * 60 + b.horaLlegada.minute;
+  final bFin = b.horaSalida.hour * 60 + b.horaSalida.minute;
 
   return aInicio < bFin && bInicio < aFin;
+}
+int dateTimeToMinutes(DateTime dateTime) {
+  return dateTime.hour * 60 + dateTime.minute;
 }

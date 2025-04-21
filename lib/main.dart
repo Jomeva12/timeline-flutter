@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'models/eventos_provider.dart';
-import './timeline_screen.dart';
+import 'package:timeline/providers/master_key_provider.dart';
+import 'package:timeline/providers/vuelo_provider.dart';
+import 'package:timeline/screens/timeline_screen.dart';
+import 'screens/home_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'providers/empresa_provider.dart';
 
-void main() {
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -12,11 +22,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => EventosProvider(),
-      child: const MaterialApp(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => EmpresaProvider()),
+        ChangeNotifierProvider(create: (_) => VueloProvider()),
+        ChangeNotifierProvider(create: (_) => MasterKeyProvider()),
+      ],
+      child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: TimelineScreen(),
+        title: 'Timeline App',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: const TimelineScreen(),
       ),
     );
   }

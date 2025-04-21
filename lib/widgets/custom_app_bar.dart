@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:timeline/screens/home_screen.dart';
+import '../screens/empresas_screen.dart';
 import 'curve_appbar_clipper.dart';
 
 class CurvedAppBarMenu extends StatelessWidget {
   final VoidCallback? onImportExcel;
   final VoidCallback? onCrearVuelo;
-
+ final DateTime? selectedDate;
   const CurvedAppBarMenu({
     super.key,
     this.onImportExcel,
     this.onCrearVuelo,
+     this.selectedDate,
   });
-
+  String _getDisplayDate() {
+    if (selectedDate != null) {
+      return DateFormat('dd/MM/yyyy').format(selectedDate!);
+    }
+    return DateFormat('dd/MM/yyyy').format(DateTime.now());
+  }
   @override
   Widget build(BuildContext context) {
     return ClipPath(
@@ -31,19 +40,60 @@ class CurvedAppBarMenu extends StatelessWidget {
             BoxShadow(color: Colors.black38, offset: Offset(0, 4), blurRadius: 10),
           ],
         ),
-        child: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-          title: const Text(
-            'Timeline Diarios',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              fontSize: 22,
-              letterSpacing: 1.2,
-            ),
+      child: AppBar(
+  backgroundColor: Colors.transparent,
+  elevation: 0,
+  centerTitle: true,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        var begin = const Offset(-1.0, 0.0);
+        var end = Offset.zero;
+        var curve = Curves.easeInOutCubic;
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+
+        return SlideTransition(
+          position: offsetAnimation,
+          child: FadeTransition(
+            opacity: animation,
+            child: child,
           ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 800),
+    ),
+  );
+},
+  ),
+  title: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const Text(
+        'Itineario',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+          fontSize: 22,
+          letterSpacing: 1.2,
+        ),
+      ),
+      const SizedBox(height: 4), // Espacio entre los textos
+      Text(
+        _getDisplayDate(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    ],
+  ),
+  // ... resto del código
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -57,13 +107,20 @@ class CurvedAppBarMenu extends StatelessWidget {
                 onSelected: (value) {
                   if (value == 'importar_excel') {
                     onImportExcel?.call();
-                  } else if (value == 'crear_vuelo') {
+                  }
+                  if (value == 'crear_vuelo') {
                     onCrearVuelo?.call();
+                  }
+                  if (value == 'empresa') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const EmpresasScreen()),
+                    );
                   }
                 },
                 itemBuilder: (context) => [
                   const PopupMenuItem(
-                    
                     value: 'importar_excel',
                     child: Text('📥 Importar Excel', style: TextStyle(fontSize: 14)),
                   ),
@@ -73,7 +130,7 @@ class CurvedAppBarMenu extends StatelessWidget {
                   ),
                   PopupMenuItem(
                     value: 'empresa',
-                    child: Text('✈️ Empresas', style: TextStyle(fontSize: 14)),
+                    child: Text('🏢 Empresa', style: TextStyle(fontSize: 14)),
                   ),
                 ],
               ),

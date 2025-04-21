@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "704594678101",
+    "project_id": "itinerarios-70663",
+    "storage_bucket": "itinerarios-70663.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:704594678101:android:8f4b63e87560d7551c1fdc",
+        "android_client_info": {
+          "package_name": "com.example.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2bbTFBQrkkBjxYgFhL8cnmE1E7M6g7qk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

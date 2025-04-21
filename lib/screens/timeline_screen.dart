@@ -2,19 +2,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timeline/linked_scroll_controller.dart';
-import 'package:timeline/models/eventos_provider.dart';
 import 'package:timeline/widgets/crear_vuelo_bottomsheet.dart';
 import 'package:timeline/widgets/curve_appbar_clipper.dart';
 import 'package:timeline/widgets/custom_app_bar.dart';
 import 'package:timeline/widgets/header_timeline.dart';
-import 'package:timeline/widgets/importar_excel_bottomsheet.dart';
+import 'package:timeline/widgets/bottomsheets/importar_excel_bottomsheet.dart';
 import 'package:timeline/widgets/timeline_wrapper.dart';
 import 'package:timeline/widgets/floating_zoom_buttons.dart';
 import 'package:timeline/utils/layout_helpers.dart';
 import 'package:timeline/utils/color_utils.dart';
 
+import '../providers/empresa_provider.dart';
+import '../providers/vuelo_provider.dart';
+import 'import_vuelos_screen.dart';
+
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key});
+ final DateTime? selectedDate;
+
+  const TimelineScreen({
+    super.key,
+    this.selectedDate,
+  });
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -35,19 +43,35 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void initState() {
     super.initState();
-
     _verticalScroll = ScrollController();
     _controllers = LinkedScrollControllerGroup();
     _headerScrollController = _controllers.createScrollController();
     _gridScrollController = _controllers.createScrollController();
 
-    // ⏱ Actualizar la línea de hora actual cada 30 segundos
-    _timer =
-        Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrentTime());
+    // Cargar datos al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToCurrentTime();
+      _cargarDatos();
+    });
   }
+  Future<void> _cargarDatos() async {
+    try {
+      final empresaProvider = context.read<EmpresaProvider>();
+      final vueloProvider = context.read<VueloProvider>();
 
+      // Primero cargar empresas
+      await empresaProvider.loadEmpresas();
+      debugPrint('✅ Empresas cargadas: ${empresaProvider.empresas.length}');
+
+      // Luego cargar vuelos
+      await vueloProvider.getVuelosPorFecha(widget.selectedDate);
+      debugPrint('✅ Vuelos cargados: ${vueloProvider.vuelos.length}');
+    } catch (e) {
+      debugPrint('❌ Error al cargar datos: $e');
+    }
+  }
   @override
   void dispose() {
     _timer.cancel();
@@ -84,7 +108,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
       curve: Curves.easeOutExpo,
     );
   }
-
+  DateTime get _fechaSeleccionada {
+    return widget.selectedDate ?? DateTime.now();
+  }
   void _zoom(double factor) {
     final screenHeight = MediaQuery.of(context).size.height;
     final currentOffset = _verticalScroll.offset;
@@ -108,22 +134,32 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final eventos = context.watch<EventosProvider>().eventos;
+    final vuelos = context.watch<VueloProvider>().vuelos;
+    final empresaProvider = context.watch<EmpresaProvider>();
     final columnWidths = calcularAnchosColumnas(
         context, columnas, MediaQuery.of(context).size.width);
     final totalWidth = columnWidths.fold(0.0, (a, b) => a + b);
     final colors = generarColoresColumnas(columnas.length);
     final timelineHeight = (hourHeight / 60) * 24 * 60;
 
+    // Calcular la cantidad de vuelos por posición
+    final vuelosPorPosicion = Map.fromEntries(
+      columnas.map((col) => MapEntry(
+        col,
+        vuelos.where((v) => v.posicion == col).length,
+      )),
+    );
+
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(80),
         child: CurvedAppBarMenu(
+          selectedDate: widget.selectedDate,
           onImportExcel: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (_) => const ImportarExcelBottomSheet(),
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) =>  ImportVuelosScreen(selectedDate: _fechaSeleccionada,)),
             );
           },
           onCrearVuelo: () {
@@ -140,6 +176,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         .bottom, // ✅ desplaza el contenido
                   ),
                   child: CrearVueloBottomSheet(
+                    selectedDate: widget.selectedDate,
                     onGuardar: () {
                       debugPrint('✈️ Guardar vuelo presionado');
                       Navigator.pop(context);
@@ -158,9 +195,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
             controller: _headerScrollController,
             columnWidths: columnWidths,
             columnColors: colors,
+            vuelosPorPosicion: vuelosPorPosicion, // Pasar el nuevo parámetro
           ),
           TimelineWrapper(
-            eventos: eventos,
+            vuelos: vuelos,
             columnas: columnas,
             hourHeight: hourHeight,
             timelineHeight: timelineHeight,

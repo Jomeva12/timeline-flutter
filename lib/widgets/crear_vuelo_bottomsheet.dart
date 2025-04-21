@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/empresa_provider.dart';
+import '../providers/vuelo_provider.dart';
 
 class CrearVueloBottomSheet extends StatefulWidget {
   final void Function()? onGuardar;
-
-  const CrearVueloBottomSheet({super.key, this.onGuardar});
+  final DateTime? selectedDate;
+  const CrearVueloBottomSheet({super.key, this.onGuardar,this.selectedDate,
+});
 
   @override
   State<CrearVueloBottomSheet> createState() => _CrearVueloBottomSheetState();
@@ -11,12 +16,16 @@ class CrearVueloBottomSheet extends StatefulWidget {
 
 class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _numVueloController = TextEditingController();
+  final _numVueloLlegadaController = TextEditingController();
+  final _numVueloSalidaController = TextEditingController();
   TimeOfDay? _horaLlegada;
   TimeOfDay? _horaSalida;
   String? _empresaSeleccionada;
+  String? _empresaName;
+  String? _importarVuelos;
   String? _posicionSeleccionada;
-  final _focusVuelo = FocusNode();
+  final _focusVueloLlegada = FocusNode();
+  final _focusVueloSalida = FocusNode();
 
   final _inputDecoration = InputDecoration(
     filled: true,
@@ -68,13 +77,19 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   @override
   void initState() {
     super.initState();
-    // Se eliminó el requestFocus para evitar abrir teclado automáticamente
+    // Cargar las empresas al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<EmpresaProvider>().loadEmpresas();
+    });
   }
 
   @override
   void dispose() {
-    _numVueloController.dispose();
-    _focusVuelo.dispose();
+    _numVueloLlegadaController.dispose();
+    _numVueloSalidaController.dispose();
+    _focusVueloLlegada.dispose();
+    _focusVueloSalida.dispose();
+
     super.dispose();
   }
 
@@ -115,29 +130,84 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
               const SizedBox(height: 24),
 
               // Empresa Dropdown
-              DropdownButtonFormField<String>(
-                decoration: _inputDecoration.copyWith(
-                  labelText: 'Empresa',
-                  prefixIcon: const Icon(Icons.business, color: Colors.blue),
-                ),
-                value: _empresaSeleccionada,
-                hint: const Text('Selecciona una empresa'),
-                items: ['Avianca', 'Wingo', 'AeroRepublica']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() => _empresaSeleccionada = value);
+              // Empresa Dropdown
+              Consumer<EmpresaProvider>(
+                builder: (context, empresaProvider, child) {
+                  final empresas = empresaProvider.empresas;
+
+                  return DropdownButtonFormField<String>(
+                    decoration: _inputDecoration.copyWith(
+                      labelText: 'Empresa',
+                      prefixIcon: const Icon(Icons.business, color: Colors.blue),
+                    ),
+                    value: _empresaSeleccionada,
+                    hint: const Text('Selecciona una empresa'),
+                    items: empresas.map((empresa) {
+                      return DropdownMenuItem(
+                        value: empresa.id,  // Usamos el ID como valor
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: empresa.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(empresa.nombre),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        final empresaSeleccionada = empresas.firstWhere(
+                              (empresa) => empresa.id == value,
+                        );
+                        setState(() {
+                          _empresaSeleccionada = value;
+                          _empresaName = empresaSeleccionada.nombre;
+                        });
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor selecciona una empresa';
+                      }
+                      return null;
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 16),
 
               // Número de vuelo
               TextFormField(
-                controller: _numVueloController,
-                focusNode: _focusVuelo,
+                controller: _numVueloLlegadaController,
+                focusNode: _focusVueloLlegada,
                 keyboardType: TextInputType.number,
                 decoration: _inputDecoration.copyWith(
-                  labelText: 'Número de vuelo',
+                  labelText: 'Número de vuelo llegada',
+                  prefixIcon: const Icon(Icons.flight_land, color: Colors.blue),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa un número de vuelo';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Número de vuelo
+              TextFormField(
+                controller: _numVueloSalidaController,
+                focusNode: _focusVueloSalida,
+                keyboardType: TextInputType.number,
+                decoration: _inputDecoration.copyWith(
+                  labelText: 'Número de vuelo salida',
                   prefixIcon: const Icon(Icons.flight_takeoff, color: Colors.blue),
                 ),
                 validator: (value) {
@@ -204,7 +274,40 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: widget.onGuardar,
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate() &&
+                        _empresaSeleccionada != null &&
+                        _horaLlegada != null &&
+                        _horaSalida != null &&
+                        _posicionSeleccionada != null) {
+                      try {
+                        final vueloProvider = context.read<VueloProvider>();
+                        await vueloProvider.crearVuelo(
+                          _empresaSeleccionada!,
+                          _empresaName!,
+                          _numVueloLlegadaController.text,
+                          _numVueloSalidaController.text,
+                          widget.selectedDate ?? DateTime.now(),
+                          _horaLlegada!,
+                          _horaSalida!,
+                          _posicionSeleccionada!,
+                        );
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Vuelo creado exitosamente')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error al crear el vuelo: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:timeline/widgets/grid_line_painter.dart';
-import '../models/evento.dart';
-import 'event_widget.dart';
+import '../models/vuelo/vuelo.dart';
+import '../models/vuelo/widget/vuelo_widget.dart';
+
 
 class TimelineGrid extends StatelessWidget {
-  final List<Evento> eventos;
+  final List<Vuelo> vuelos;
   final List<String> columnas;
   final double hourHeight;
   final List<double> columnWidths;
@@ -12,7 +13,7 @@ class TimelineGrid extends StatelessWidget {
 
   const TimelineGrid({
     super.key,
-    required this.eventos,
+    required this.vuelos,
     required this.columnas,
     required this.hourHeight,
     required this.columnWidths,
@@ -21,87 +22,88 @@ class TimelineGrid extends StatelessWidget {
 
   double minuteToPixels(int minutes) => (minutes / 60) * hourHeight;
 
-  int _timeToMinutes(TimeOfDay time) => time.hour * 60 + time.minute;
+  int _timeToMinutes(DateTime time) => time.hour * 60 + time.minute;
 
-  List<List<Evento>> _agruparEventosEnBloques(List<Evento> eventos) {
-    final List<List<Evento>> bloques = [];
+  List<List<Vuelo>> _agruparVuelosEnBloques(List<Vuelo> vuelos) {
+    final List<List<Vuelo>> bloques = [];
 
-    for (final evento in eventos) {
+    for (final vuelo in vuelos) {
       bool asignado = false;
 
       for (final grupo in bloques) {
-        if (grupo.any((e) => _seSuperponen(e, evento))) {
-          grupo.add(evento);
+        if (grupo.any((v) => _seSuperponen(v, vuelo))) {
+          grupo.add(vuelo);
           asignado = true;
           break;
         }
       }
 
       if (!asignado) {
-        bloques.add([evento]);
+        bloques.add([vuelo]);
       }
     }
 
     return bloques;
   }
 
-  bool _seSuperponen(Evento a, Evento b) {
-    final aInicio = _timeToMinutes(a.inicio);
-    final aFin = _timeToMinutes(a.fin);
-    final bInicio = _timeToMinutes(b.inicio);
-    final bFin = _timeToMinutes(b.fin);
+  bool _seSuperponen(Vuelo a, Vuelo b) {
+    final aInicio = _timeToMinutes(a.horaLlegada);
+    final aFin = _timeToMinutes(a.horaSalida);
+    final bInicio = _timeToMinutes(b.horaLlegada);
+    final bFin = _timeToMinutes(b.horaSalida);
 
     return aInicio < bFin && bInicio < aFin;
   }
 
-  List<Widget> _renderEventosPorPistas(
-  BuildContext context,
-  List<Evento> eventosColumna,
-  double columnWidth,
-) {
-  final pistas = <List<Evento>>[];
+  List<Widget> _renderVuelosPorPistas(
+      BuildContext context,
+      List<Vuelo> vuelosColumna,
+      double columnWidth,
+      ) {
+    final pistas = <List<Vuelo>>[];
 
-  for (final evento in eventosColumna) {
-    bool asignado = false;
+    for (final vuelo in vuelosColumna) {
+      bool asignado = false;
 
-    for (final pista in pistas) {
-      if (!pista.any((e) => _seSuperponen(e, evento))) {
-        pista.add(evento);
-        asignado = true;
-        break;
+      for (final pista in pistas) {
+        if (!pista.any((v) => _seSuperponen(v, vuelo))) {
+          pista.add(vuelo);
+          asignado = true;
+          break;
+        }
+      }
+
+      if (!asignado) {
+        pistas.add([vuelo]);
       }
     }
 
-    if (!asignado) {
-      pistas.add([evento]);
+    final totalPistas = pistas.length;
+    final widgets = <Widget>[];
+
+    for (int i = 0; i < pistas.length; i++) {
+      for (final vuelo in pistas[i]) {
+        final top = minuteToPixels(_timeToMinutes(vuelo.horaLlegada));
+        final height = minuteToPixels(
+            _timeToMinutes(vuelo.horaSalida) - _timeToMinutes(vuelo.horaLlegada)
+        );
+        final width = columnWidth / totalPistas;
+        final left = i * width;
+
+        widgets.add(Positioned(
+          top: top,
+          left: left,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: VueloWidget(vuelo: vuelo),  // Nuevo widget para vuelos
+          ),
+        ));
+      }
     }
+
+    return widgets;
   }
-
-  final totalPistas = pistas.length;
-  final widgets = <Widget>[];
-
-  for (int i = 0; i < pistas.length; i++) {
-    for (final evento in pistas[i]) {
-      final top = minuteToPixels(_timeToMinutes(evento.inicio));
-      final height = minuteToPixels(_timeToMinutes(evento.fin) - _timeToMinutes(evento.inicio));
-      final width = columnWidth / totalPistas;
-      final left = i * width;
-
-      widgets.add(Positioned(
-        top: top,
-        left: left,
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: EventWidget(evento: evento),
-        ),
-      ));
-    }
-  }
-
-  return widgets;
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -113,8 +115,8 @@ class TimelineGrid extends StatelessWidget {
       child: Row(
         children: List.generate(columnas.length, (colIndex) {
           final colName = columnas[colIndex];
-          final eventosCol = eventos.where((e) => e.posicion == colName).toList();
-          final bloques = _agruparEventosEnBloques(eventosCol);
+          final vuelosCol = vuelos.where((v) => v.posicion == colName).toList();
+          final bloques = _agruparVuelosEnBloques(vuelosCol);
           final columnWidth = columnWidths[colIndex];
           final backgroundColor = columnColors[colIndex % columnColors.length];
 
@@ -128,8 +130,7 @@ class TimelineGrid extends StatelessWidget {
                   painter: GridLinePainter(hourHeight: hourHeight),
                 ),
                 for (final bloque in bloques)
-                  ..._renderEventosPorPistas(context, eventosCol, columnWidth),
-
+                  ..._renderVuelosPorPistas(context, vuelosCol, columnWidth),
               ],
             ),
           );

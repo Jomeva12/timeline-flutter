@@ -1,12 +1,13 @@
 // widgets/timeline_wrapper.dart
 import 'package:flutter/material.dart';
-import 'package:timeline/models/evento.dart';
 import 'package:timeline/widgets/hour_column.dart';
 import 'package:timeline/widgets/timeline_grid.dart';
 import 'package:timeline/widgets/current_time_line.dart';
 
+import '../models/vuelo/vuelo.dart';
+
 class TimelineWrapper extends StatelessWidget {
-  final List<Evento> eventos;
+  final List<Vuelo> vuelos;  // Cambiado de eventos a vuelos
   final List<String> columnas;
   final double hourHeight;
   final double timelineHeight;
@@ -17,7 +18,7 @@ class TimelineWrapper extends StatelessWidget {
 
   const TimelineWrapper({
     super.key,
-    required this.eventos,
+    required this.vuelos,  // Cambiado de eventos a vuelos
     required this.columnas,
     required this.hourHeight,
     required this.timelineHeight,
@@ -36,12 +37,11 @@ class TimelineWrapper extends StatelessWidget {
         controller: verticalScrollController,
         physics: const BouncingScrollPhysics(),
         child: SizedBox(
-          height: timelineHeight + 50, // espacio extra para evitar corte visual
+          height: timelineHeight + 50,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            HourColumn(hourHeight: hourHeight),
-
+              HourColumn(hourHeight: hourHeight),
               Expanded(
                 child: SingleChildScrollView(
                   controller: horizontalScrollController,
@@ -52,7 +52,7 @@ class TimelineWrapper extends StatelessWidget {
                     child: Stack(
                       children: [
                         TimelineGrid(
-                          eventos: eventos,
+                          vuelos: vuelos,  // Cambiado de eventos a vuelos
                           columnas: columnas,
                           hourHeight: hourHeight,
                           columnWidths: columnWidths,

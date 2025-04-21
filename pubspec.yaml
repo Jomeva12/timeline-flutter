@@ -38,6 +38,16 @@ dependencies:
   provider: ^6.1.1
   file_picker: ^6.1.1
   permission_handler: ^11.0.1
+  syncfusion_flutter_calendar: ^24.1.41
+  intl: ^0.19.0  # Actualizado a esta versión
+  flex_color_picker: ^3.3.0
+  flutter_animate: ^4.2.0
+  flutter_slidable: ^3.0.0
+  google_fonts: ^5.1.0
+  cloud_firestore: ^4.13.3
+  firebase_core: ^2.24.0
+  excel: ^2.1.0
+ 
 
 dev_dependencies:
   flutter_test:
