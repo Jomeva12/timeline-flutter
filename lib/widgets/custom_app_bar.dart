@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:timeline/screens/home_screen.dart';
+import '../models/vuelo/vuelo.dart';
 import '../screens/empresas_screen.dart';
 import 'curve_appbar_clipper.dart';
 
@@ -8,11 +9,13 @@ class CurvedAppBarMenu extends StatelessWidget {
   final VoidCallback? onImportExcel;
   final VoidCallback? onCrearVuelo;
  final DateTime? selectedDate;
+ final List<Vuelo>? vuelos;
   const CurvedAppBarMenu({
     super.key,
     this.onImportExcel,
     this.onCrearVuelo,
      this.selectedDate,
+    this.vuelos
   });
   String _getDisplayDate() {
     if (selectedDate != null) {
@@ -31,7 +34,7 @@ class CurvedAppBarMenu extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               Color(0xFF4A90E2), // azul pastel
-              Color(0xFF6EB5FF), // celeste más suave
+              Color(0xFF072A4E), // celeste más suave
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -73,8 +76,8 @@ class CurvedAppBarMenu extends StatelessWidget {
   title: Column(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      const Text(
-        'Itineario',
+       Text(
+        'Itineario (${vuelos!.length})',
         style: TextStyle(
           fontWeight: FontWeight.w600,
           color: Colors.white,

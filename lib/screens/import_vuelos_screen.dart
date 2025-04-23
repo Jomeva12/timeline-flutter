@@ -4,12 +4,16 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:provider/provider.dart';
 import '../models/vuelo/vuelo_import.dart';
-import '../widgets/curve_appbar_clipper.dart';
+import '../providers/empresa_provider.dart';
+import '../providers/vuelo_provider.dart';
+import 'importacion/appbar/appbar.dart';
+import 'importacion/builder_card/vuelos_preview_list.dart';
+import 'importacion/error_card/error_card.dart';
+import 'importacion/file_selector_card/file_selector_card.dart';
 
 class ImportVuelosScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -25,8 +29,17 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
   List<String> _logs = [];      // mensajes de log para UI y debug
   List<VueloImport> _vuelosPreview = [];
   List<String> _errores = [];
-
+  bool _isExpanded = true; // Controla el estado del acordeón
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   // ----------------------------------------
+  void _onVuelosChanged(List<VueloImport> updatedVuelos) {
+    setState(() {
+
+      debugPrint('_vuelosPreview modificado1 ${_vuelosPreview.length}');
+      _vuelosPreview = updatedVuelos;
+      debugPrint('_vuelosPreview modificado2 ${_vuelosPreview.length}');
+    });
+  }
   // Procesamiento de Excel (igual que antes)
   // ----------------------------------------
   Future<void> _processExcelFile(List<int> bytes) async {
@@ -65,7 +78,12 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
         setState(() => _progress = i / total);
         await Future.delayed(const Duration(milliseconds: 50));
       }
-      setState(() => _logs.add('Procesamiento completado'));
+
+      setState(() {
+        _isExpanded = false; // Contrae la card si la importación fue exitosa
+        _logs.add('Procesamiento completado');
+      });
+
     } catch (e) {
       _showError('Error al procesar archivo: $e');
       debugPrint('[ImportVuelos][EXCEPTION] $e');
@@ -143,199 +161,179 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(100), // Ajusta la altura según necesites
-        child: _AppBar(),
+      appBar: const PreferredSize(
+        preferredSize: Size.fromHeight(100), // Ajusta la altura según necesites
+        child: AppBarImportacion(),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Card para seleccionar archivo
-              FileSelectorCard(
-                fileName: _fileName,
-                onSelect: _selectFile,
-                selectedDate: widget.selectedDate!,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
-
-              const SizedBox(height: 12),
-              // Barra de progreso
-              if (_progress != null) ...[
-                LinearProgressIndicator(value: _progress),
-                const SizedBox(height: 8),
-                Text('${(_progress! * 100).toStringAsFixed(0)}% procesado'),
-                const SizedBox(height: 12),
-              ],
-
-              // Logs de proceso
-              if (_logs.isNotEmpty)
-                SizedBox(
-                  height: 150,
-                  child: Card(
-                    color: Colors.grey[100],
-                    child: ListView(
-                      padding: const EdgeInsets.all(8),
-                      children: _logs.map((l) => Text('• $l')).toList(),
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 12),
-              // Errores de parsing
-              if (_errores.isNotEmpty) ErrorCard(errors: _errores),
-
-              const SizedBox(height: 12),
-              // PREVIEW estilo Firestore
-              if (_vuelosPreview.isNotEmpty) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Vista previa:',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _vuelosPreview.length,
-                  itemBuilder: (ctx, i) {
-                    final v = _vuelosPreview[i];
-                    return Card(
-                      elevation: 4,
-                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(
-                            colors: [Colors.blue.shade50, Colors.white],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, _vuelosPreview.isNotEmpty ? 80 : 16),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isExpanded = !_isExpanded;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.vertical(
+                              top: const Radius.circular(12),
+                              bottom: Radius.circular(_isExpanded ? 0 : 12),
+                            ),
                           ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Encabezado con empresa
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween, // Para separar el contenido
                                 children: [
-                                  // Mantiene el diseño original de la empresa
-                                  Row(
-                                    children: [
-                                      Icon(Icons.flight_takeoff, color: Colors.blue.shade700),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        v.empresaNombre ?? '<pendiente>',
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ],
+                                  Icon(
+                                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                                    color: Colors.blue.shade700,
                                   ),
-                                  // Contador en el extremo derecho
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-
-                                    ),
-                                    child: Text(
-                                      '${i + 1}/${_vuelosPreview.length}',
-                                      style: TextStyle(
-                                        color: Colors.blue.shade700,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Información de Importación',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
-                              const Divider(height: 24),
-
-                              // Información de vuelos
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildInfoColumn(
-                                    'Llegada',
-                                    v.numeroVueloLlegada,
-                                    _formatTimeOfDay(v.horaLlegada),
-                                    Icons.flight_land,
+                              if (_fileName != null)
+                                Text(
+                                  _fileName!,
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 12,
                                   ),
-                                  Container(
-                                    height: 40,
-                                    width: 1,
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  _buildInfoColumn(
-                                    'Salida',
-                                    v.numeroVueloSalida,
-                                    _formatTimeOfDay(v.horaSalida),
-                                    Icons.flight_takeoff,
-                                  ),
-                                ],
-                              ),
-
-                              const Divider(height: 24),
-
-                              // Fecha y posición
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.calendar_today,
-                                          size: 16, color: Colors.grey.shade700),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        DateFormat('dd/MM/yyyy').format(v.fecha),
-                                        style: TextStyle(color: Colors.grey.shade700),
-                                      ),
-                                    ],
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade100,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.place, size: 16, color: Colors.blue.shade700),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Posición ${v.posicion}',
-                                          style: TextStyle(color: Colors.blue.shade700),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
                             ],
                           ),
                         ),
                       ),
-                    );
-                  },
+                      // Contenido expandible
+                      AnimatedCrossFade(
+                        duration: const Duration(milliseconds: 300),
+                        crossFadeState: _isExpanded
+                            ? CrossFadeState.showFirst
+                            : CrossFadeState.showSecond,
+                        firstChild: FileSelectorCard(
+                          fileName: _fileName,
+                          onSelect: _selectFile,
+                          selectedDate: widget.selectedDate!,
+                        ),
+                        secondChild: const SizedBox.shrink(),
+                      ),
+
+                      const SizedBox(height: 12),
+                      // Barra de progreso
+                      if (_progress != null) ...[
+                        LinearProgressIndicator(value: _progress),
+                        const SizedBox(height: 8),
+                        Text('${(_progress! * 100).toStringAsFixed(0)}% procesado'),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Logs de proceso
+                      if (_logs.isNotEmpty)
+                        SizedBox(
+                          height: 150,
+                          child: Card(
+                            color: Colors.grey[100],
+                            child: ListView(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.all(8),
+                              children: _logs.map((l) => Text('• $l')).toList(),
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 12),
+                      // Errores de parsing
+                      if (_errores.isNotEmpty) ErrorCard(errors: _errores),
+
+                      const SizedBox(height: 12),
+                      // PREVIEW estilo Firestore
+                      if (_vuelosPreview.isNotEmpty) ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Vista previa:',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        VuelosPreviewList(
+                          vuelos: _vuelosPreview,
+                          formatTimeOfDay: _formatTimeOfDay,
+                          onVuelosChanged: _onVuelosChanged,
+                        ),
+                      ],
+                    ]),
+                  ),
                 ),
               ],
-            ],
+            ),
           ),
-        ),
+          // Botón fijo de guardar
+          if (_vuelosPreview.isNotEmpty && _errores.isEmpty)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 5,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _isLoading ? null : _guardarVuelos,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                      'Guardar ${_vuelosPreview.length} vuelos',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+
+                  ),
+                ),
+              ),
+            ),
+        ],
+
       ),
     );
   }
@@ -375,318 +373,125 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
       ),
     );
   }
+  Future<void> _guardarVuelos() async {
+    try {
+      debugPrint('🚀 Iniciando proceso de guardar vuelos...');
+      setState(() => _isLoading = true);
 
+      final vueloProvider = Provider.of<VueloProvider>(context, listen: false);
+      final empresaProvider = Provider.of<EmpresaProvider>(context, listen: false);
+      debugPrint('✅ Providers obtenidos correctamente');
+
+      // Mostrar diálogo de confirmación
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmar importación'),
+          content: Text('¿Deseas importar ${_vuelosPreview.length} vuelos?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Importar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmar != true) {
+        debugPrint('❌ Importación cancelada por el usuario');
+        return;
+      }
+
+      debugPrint('📝 Comenzando importación de ${_vuelosPreview.length} vuelos...');
+
+      // Crear cada vuelo
+      for (var i = 0; i < _vuelosPreview.length; i++) {
+        final vuelo = _vuelosPreview[i];
+        debugPrint('🔄 Procesando vuelo ${i + 1}/${_vuelosPreview.length}');
+        debugPrint('📌 Buscando empresa: ${vuelo.empresaNombre}');
+
+        // Obtener el ID de la empresa usando el nombre
+        final empresaId = await empresaProvider.getEmpresaIdByNombre(vuelo.empresaNombre);
+
+        if (empresaId == null) {
+          debugPrint('❌ No se encontró la empresa: ${vuelo.empresaNombre}');
+          throw Exception('No se encontró la empresa: ${vuelo.empresaNombre}');
+        }
+
+        debugPrint('✅ ID de empresa encontrado: $empresaId');
+        debugPrint('📊 Datos del vuelo:');
+        debugPrint('   - Empresa: ${vuelo.empresaNombre}');
+        debugPrint('   - Vuelo llegada: ${vuelo.numeroVueloLlegada}');
+        debugPrint('   - Vuelo salida: ${vuelo.numeroVueloSalida}');
+        debugPrint('   - Fecha: ${widget.selectedDate}');
+        debugPrint('   - Hora llegada: ${vuelo.horaLlegada}');
+        debugPrint('   - Hora salida: ${vuelo.horaSalida}');
+        debugPrint('   - Posición: ${vuelo.posicion}');
+
+        try {
+          await vueloProvider.crearVuelo(
+            empresaId,
+            vuelo.empresaNombre,
+            vuelo.numeroVueloLlegada,
+            vuelo.numeroVueloSalida,
+            widget.selectedDate!,
+            TimeOfDay.fromDateTime(vuelo.horaLlegada),
+            TimeOfDay.fromDateTime(vuelo.horaSalida),
+            vuelo.posicion,
+          );
+          debugPrint('✅ Vuelo ${i + 1} guardado exitosamente');
+        } catch (e) {
+          debugPrint('❌ Error al guardar vuelo ${i + 1}: $e');
+          throw Exception('Error al guardar vuelo ${i + 1}: $e');
+        }
+      }
+
+      debugPrint('✅ Todos los vuelos fueron importados exitosamente');
+
+      if (!mounted) return;
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_vuelosPreview.length} vuelos importados exitosamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Opcional: Navegar hacia atrás
+      Navigator.pop(context);
+
+    } catch (e) {
+      debugPrint('❌ ERROR GENERAL: $e');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al importar vuelos: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      debugPrint('🏁 Proceso de importación finalizado');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 // Función para formatear TimeOfDay
   String _formatTimeOfDay(DateTime dateTime) {
     return DateFormat('HH:mm').format(dateTime);
   }
 }
 
-class _AppBar extends StatelessWidget {
-  const _AppBar({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: CurvedAppBarClipper(),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade500,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-
-                    const Text(
-                      'Importar Vuelos',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.help_outline, color: Colors.white),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Dialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              elevation: 0,
-                              backgroundColor: Colors.transparent,
-                              child: Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.rectangle,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 10.0,
-                                      offset: const Offset(0.0, 10.0),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Icono superior
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue.shade50,
-                                            borderRadius: BorderRadius.circular(12),
-
-                                          ),
-                                          child: Icon(
-                                            Icons.info_outline,
-                                            size: 20,
-                                            color: Colors.blue.shade700,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Recomendaciones',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.blue.shade900,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Importantes',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.blue.shade900,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
 
 
-                                    const SizedBox(height: 20),
 
-                                    // Lista de recomendaciones
-                                    ...buildRecommendationsList(),
 
-                                    const SizedBox(height: 20),
 
-                                    // Botón de cerrar
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue.shade700,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
-                                        ),
-                                        minimumSize: const Size(double.infinity, 45),
-                                      ),
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text(
-                                        'Entendido',
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  List<Widget> buildRecommendationsList() {
-    final recommendations = [
-      {
-        'icon': Icons.business,
-        'title': 'Nombres de Empresa',
-        'description': 'Use exactamente el mismo nombre registrado en empresas, sin espacios adicionales.',
-      },
-      {
-        'icon': Icons.table_chart,
-        'title': 'Formato del Archivo',
-        'description': 'Verifique que las columnas tengan los nombres correctos y el tipo de datos apropiado.',
-      },
-      {
-        'icon': Icons.swipe_left,
-        'title': 'Edición Previa',
-        'description': 'Puede eliminar elementos deslizando hacia la izquierda antes de la importación.',
-      },
-      {
-        'icon': Icons.check_circle,
-        'title': 'Confirmación',
-        'description': 'Al finalizar, confirme la importación para procesar los datos.',
-      },
-      {
-        'icon': Icons.error_outline,
-        'title': 'En Caso de Error',
-        'description': 'Verifique el archivo, formato, nombres de columnas y tipos de datos.',
-      },
-    ];
-
-    return recommendations.map((rec) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                rec['icon'] as IconData,
-                size: 18,
-                color: Colors.blue.shade700,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rec['title'] as String,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    rec['description'] as String,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
-  }
-}
-
-class FileSelectorCard extends StatelessWidget {
-  final String? fileName;
-  final VoidCallback onSelect;
-  final DateTime selectedDate;
-  const FileSelectorCard({
-    super.key,
-    required this.fileName,
-    required this.onSelect,
-    required this.selectedDate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Seleccionar Archivo Excel',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Fecha: ${DateFormat('dd/MM/yyyy').format(selectedDate)}',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: Colors.blue),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Columnas: Nombre de Empresa, Vuelo Llegada, Vuelo Salida, Hora Llegada, Hora Salida, Posición',
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onSelect,
-              icon: const Icon(Icons.upload_file),
-              label: const Text('Seleccionar Archivo'),
-            ),
-            if (fileName != null) ...[
-              const SizedBox(height: 8),
-              Text('Archivo: $fileName'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ErrorCard extends StatelessWidget {
-  final List<String> errors;
-  const ErrorCard({super.key, required this.errors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.red[50],
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: errors.map((e) => Text('• $e')).toList(),
-        ),
-      ),
-    );
-  }
-}
 
 

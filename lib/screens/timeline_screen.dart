@@ -155,6 +155,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(80),
         child: CurvedAppBarMenu(
+          vuelos: vuelos,
           selectedDate: widget.selectedDate,
           onImportExcel: () {
             Navigator.push(

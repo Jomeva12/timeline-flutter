@@ -43,15 +43,15 @@ class VueloProvider with ChangeNotifier {
 
   // Crear nuevo vuelo
   Future<void> crearVuelo(
-    String empresaId,
-    String empresaName,
-    String numeroVueloLlegada,
-    String numeroVueloSalida,
-    DateTime fecha,
-    TimeOfDay horaLlegada,
-    TimeOfDay horaSalida,
-    String posicion,
-  ) async {
+      String empresaId,
+      String empresaName,
+      String numeroVueloLlegada,
+      String numeroVueloSalida,
+      DateTime fecha,
+      TimeOfDay horaLlegada,
+      TimeOfDay horaSalida,
+      String posicion,
+      ) async {
     try {
       final rutaDia = _obtenerRutaDia(fecha);
 
@@ -73,8 +73,9 @@ class VueloProvider with ChangeNotifier {
       );
 
       final nuevoVuelo = Vuelo(
+        id: numeroVueloLlegada, // Usar número de vuelo como ID
         empresaId: empresaId,
-        empresaName:empresaName,
+        empresaName: empresaName,
         numeroVueloLlegada: numeroVueloLlegada,
         numeroVueloSalida: numeroVueloSalida,
         fecha: fecha,
@@ -92,17 +93,36 @@ class VueloProvider with ChangeNotifier {
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // Agregar el vuelo a la subcolección
-      final vueloRef =
-          await diaRef.collection('vuelos_dia').add(nuevoVuelo.toMap());
+      // Referencia al documento del vuelo usando numeroVueloLlegada como ID
+      final vueloRef = diaRef.collection('vuelos_dia').doc(numeroVueloLlegada);
 
-      // Actualizar la lista local
-      _vuelos.add(Vuelo.fromMap(vueloRef.id, nuevoVuelo.toMap()));
-      debugPrint(
-          '✅ Vuelo creado exitosamente en la ruta: /vuelos/$rutaDia/vuelos_dia/${vueloRef.id}');
+      // Verificar si el vuelo ya existe
+      final vueloDoc = await vueloRef.get();
+
+      if (vueloDoc.exists) {
+        // Actualizar vuelo existente
+        await vueloRef.update(nuevoVuelo.toMap());
+        debugPrint('🔄 Vuelo actualizado: /vuelos/$rutaDia/vuelos_dia/$numeroVueloLlegada');
+
+        // Actualizar lista local
+        final index = _vuelos.indexWhere((v) => v.id == numeroVueloLlegada);
+        if (index != -1) {
+          _vuelos[index] = nuevoVuelo;
+        } else {
+          _vuelos.add(nuevoVuelo);
+        }
+      } else {
+        // Crear nuevo vuelo
+        await vueloRef.set(nuevoVuelo.toMap());
+        debugPrint('✅ Vuelo creado: /vuelos/$rutaDia/vuelos_dia/$numeroVueloLlegada');
+
+        // Agregar a lista local
+        _vuelos.add(nuevoVuelo);
+      }
+
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ Error al crear vuelo: $e');
+      debugPrint('❌ Error al crear/actualizar vuelo: $e');
       rethrow;
     }
   }
