@@ -41,6 +41,70 @@ class VueloProvider with ChangeNotifier {
     }
   }
 
+  // En VueloProvider
+  Future<void> actualizarVuelo(
+      String vueloId,
+      String empresaId,
+      String empresaName,
+      String numeroVueloLlegada,
+      String numeroVueloSalida,
+      DateTime fecha,
+      TimeOfDay horaLlegada,
+      TimeOfDay horaSalida,
+      String posicion,
+      ) async {
+    try {
+      final rutaDia = _obtenerRutaDia(fecha);
+
+      // Convertir TimeOfDay a DateTime
+      final fechaLlegada = DateTime(
+        fecha.year,
+        fecha.month,
+        fecha.day,
+        horaLlegada.hour,
+        horaLlegada.minute,
+      );
+
+      final fechaSalida = DateTime(
+        fecha.year,
+        fecha.month,
+        fecha.day,
+        horaSalida.hour,
+        horaSalida.minute,
+      );
+
+      final vueloActualizado = Vuelo(
+        id: vueloId,
+        empresaId: empresaId,
+        empresaName: empresaName,
+        numeroVueloLlegada: numeroVueloLlegada,
+        numeroVueloSalida: numeroVueloSalida,
+        fecha: fecha,
+        horaLlegada: fechaLlegada,
+        horaSalida: fechaSalida,
+        posicion: posicion,
+      );
+
+      // Referencia al documento del día
+      final diaRef = _db.collection('vuelos').doc(rutaDia);
+      final vueloRef = diaRef.collection('vuelos_dia').doc(vueloId);
+
+      await vueloRef.update(vueloActualizado.toMap());
+      debugPrint('🔄 Vuelo actualizado: /vuelos/$rutaDia/vuelos_dia/$vueloId');
+
+      // Actualizar lista local
+      final index = _vuelos.indexWhere((v) => v.id == vueloId);
+      if (index != -1) {
+        _vuelos[index] = vueloActualizado;
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error al actualizar vuelo: $e');
+      rethrow;
+    }
+  }
+
   // Crear nuevo vuelo
   Future<void> crearVuelo(
       String empresaId,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:timeline/screens/home_screen.dart';
 import '../models/vuelo/vuelo.dart';
-import '../screens/empresas_screen.dart';
+import '../screens/empresa/empresas_screen.dart';
 import 'curve_appbar_clipper.dart';
 
 class CurvedAppBarMenu extends StatelessWidget {

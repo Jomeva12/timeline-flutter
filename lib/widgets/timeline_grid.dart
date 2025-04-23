@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:timeline/widgets/grid_line_painter.dart';
 import '../models/vuelo/vuelo.dart';
-import '../models/vuelo/widget/vuelo_widget.dart';
+import '../screens/timeline/widget/vuelo_widget.dart';
 
 
 class TimelineGrid extends StatelessWidget {

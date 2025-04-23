@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/vuelo/vuelo.dart';
 import '../providers/empresa_provider.dart';
 import '../providers/vuelo_provider.dart';
 
 class CrearVueloBottomSheet extends StatefulWidget {
   final void Function()? onGuardar;
   final DateTime? selectedDate;
-  const CrearVueloBottomSheet({super.key, this.onGuardar,this.selectedDate,
-});
+  final Vuelo? vueloExistente; // Añadir este parámetro
+
+  const CrearVueloBottomSheet({
+    super.key,
+    this.onGuardar,
+    this.selectedDate,
+    this.vueloExistente, // Añadir este parámetro
+  });
 
   @override
   State<CrearVueloBottomSheet> createState() => _CrearVueloBottomSheetState();
 }
+
 
 class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   final _formKey = GlobalKey<FormState>();
@@ -77,6 +85,18 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   @override
   void initState() {
     super.initState();
+
+    // Prellenar campos si existe un vuelo
+    if (widget.vueloExistente != null) {
+      _empresaSeleccionada = widget.vueloExistente!.empresaId;
+      _empresaName = widget.vueloExistente!.empresaName;
+      _numVueloLlegadaController.text = widget.vueloExistente!.numeroVueloLlegada;
+      _numVueloSalidaController.text = widget.vueloExistente!.numeroVueloSalida;
+      _horaLlegada = TimeOfDay.fromDateTime(widget.vueloExistente!.horaLlegada);
+      _horaSalida = TimeOfDay.fromDateTime(widget.vueloExistente!.horaSalida);
+      _posicionSeleccionada = widget.vueloExistente!.posicion;
+    }
+
     // Cargar las empresas al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<EmpresaProvider>().loadEmpresas();
@@ -112,9 +132,9 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '✈️ Crear Vuelo',
-                    style: TextStyle(
+                  Text(
+                    widget.vueloExistente != null ? '✈️ Editar Vuelo' : '✈️ Crear Vuelo',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -282,27 +302,54 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
                         _posicionSeleccionada != null) {
                       try {
                         final vueloProvider = context.read<VueloProvider>();
-                        await vueloProvider.crearVuelo(
-                          _empresaSeleccionada!,
-                          _empresaName!,
-                          _numVueloLlegadaController.text,
-                          _numVueloSalidaController.text,
-                          widget.selectedDate ?? DateTime.now(),
-                          _horaLlegada!,
-                          _horaSalida!,
-                          _posicionSeleccionada!,
-                        );
+
+                        if (widget.vueloExistente != null) {
+                          // Actualizar vuelo existente
+                          await vueloProvider.actualizarVuelo(
+                            widget.vueloExistente!.id!,
+                            _empresaSeleccionada!,
+                            _empresaName!,
+                            _numVueloLlegadaController.text,
+                            _numVueloSalidaController.text,
+                            widget.selectedDate ?? widget.vueloExistente!.fecha,
+                            _horaLlegada!,
+                            _horaSalida!,
+                            _posicionSeleccionada!,
+                          );
+                        } else {
+                          // Crear nuevo vuelo
+                          await vueloProvider.crearVuelo(
+                            _empresaSeleccionada!,
+                            _empresaName!,
+                            _numVueloLlegadaController.text,
+                            _numVueloSalidaController.text,
+                            widget.selectedDate ?? DateTime.now(),
+                            _horaLlegada!,
+                            _horaSalida!,
+                            _posicionSeleccionada!,
+                          );
+                        }
 
                         if (mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Vuelo creado exitosamente')),
+                            SnackBar(
+                              content: Text(
+                                widget.vueloExistente != null
+                                    ? 'Vuelo actualizado exitosamente'
+                                    : 'Vuelo creado exitosamente',
+                              ),
+                            ),
                           );
                         }
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error al crear el vuelo: $e')),
+                            SnackBar(
+                              content: Text(
+                                'Error al ${widget.vueloExistente != null ? 'actualizar' : 'crear'} el vuelo: $e',
+                              ),
+                            ),
                           );
                         }
                       }
@@ -316,15 +363,15 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Guardar',
-                    style: TextStyle(
+                  child: Text(
+                    widget.vueloExistente != null ? 'Actualizar' : 'Guardar',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ),
+              )
             ],
           ),
         ),

@@ -6,11 +6,11 @@ import 'package:provider/provider.dart';
 import 'package:timeline/screens/empresa/widgets/empresa_form.dart';
 import 'package:timeline/screens/empresa/widgets/empty_state.dart';
 
-import '../../models/empresa/empresa.dart';
-import '../../providers/empresa_provider.dart';
-import '../../utils/notification_utils.dart';
-import '../widgets/delete_confirmation_dialog.dart';
-import 'empresa/widgets/empresa_list.dart';
+import '../../../models/empresa/empresa.dart';
+import '../../../providers/empresa_provider.dart';
+import '../../../utils/notification_utils.dart';
+import '../../widgets/delete_confirmation_dialog.dart';
+import 'widgets/empresa_list.dart';
 
 class EmpresasScreen extends StatefulWidget {
   const EmpresasScreen({super.key});

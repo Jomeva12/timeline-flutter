@@ -12,9 +12,9 @@ import 'package:timeline/widgets/floating_zoom_buttons.dart';
 import 'package:timeline/utils/layout_helpers.dart';
 import 'package:timeline/utils/color_utils.dart';
 
-import '../providers/empresa_provider.dart';
-import '../providers/vuelo_provider.dart';
-import 'import_vuelos_screen.dart';
+import '../../providers/empresa_provider.dart';
+import '../../providers/vuelo_provider.dart';
+import '../importacion/import_vuelos_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
  final DateTime? selectedDate;

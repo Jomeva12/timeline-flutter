@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:timeline/screens/timeline_screen.dart';
+import 'package:timeline/screens/timeline/timeline_screen.dart';
 import '../providers/vuelo_provider.dart';
 import '../widgets/curve_appbar_clipper.dart';
-import 'empresas_screen.dart';
+import 'empresa/empresas_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {

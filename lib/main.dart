@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timeline/providers/master_key_provider.dart';
 import 'package:timeline/providers/vuelo_provider.dart';
-import 'package:timeline/screens/timeline_screen.dart';
+import 'package:timeline/screens/timeline/timeline_screen.dart';
 import 'screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';

@@ -7,13 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import '../models/vuelo/vuelo_import.dart';
-import '../providers/empresa_provider.dart';
-import '../providers/vuelo_provider.dart';
-import 'importacion/appbar/appbar.dart';
-import 'importacion/builder_card/vuelos_preview_list.dart';
-import 'importacion/error_card/error_card.dart';
-import 'importacion/file_selector_card/file_selector_card.dart';
+import '../../models/vuelo/vuelo_import.dart';
+import '../../providers/empresa_provider.dart';
+import '../../providers/vuelo_provider.dart';
+import 'appbar/appbar.dart';
+import 'builder_card/vuelos_preview_list.dart';
+import 'error_card/error_card.dart';
+import 'file_selector_card/file_selector_card.dart';
 
 class ImportVuelosScreen extends StatefulWidget {
   final DateTime? selectedDate;
