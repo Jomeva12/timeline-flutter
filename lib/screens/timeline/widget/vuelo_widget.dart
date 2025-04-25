@@ -81,6 +81,15 @@ class VueloWidget extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              Text(
+                '${vuelo.origen}\n'
+                    '${vuelo.destino}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),

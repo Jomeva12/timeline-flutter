@@ -4,6 +4,8 @@ class Vuelo {
   final String empresaName;
   final String numeroVueloLlegada;
   final String numeroVueloSalida;
+  final String origen;
+  final String destino;
   final DateTime fecha;
   final DateTime horaLlegada;
   final DateTime horaSalida;
@@ -14,6 +16,8 @@ class Vuelo {
     required this.empresaId,
     required this.numeroVueloLlegada,
     required this.numeroVueloSalida,
+    required this.origen,
+    required this.destino,
     required this.fecha,
     required this.horaLlegada,
     required this.horaSalida,
@@ -27,6 +31,8 @@ class Vuelo {
       'empresaName':empresaName,
       'numeroVueloLlegada': numeroVueloLlegada,
       'numeroVueloSalida': numeroVueloSalida,
+      'origen': origen,
+      'destino': destino,
       'fecha': fecha.toIso8601String(),
       'horaLlegada': horaLlegada.toIso8601String(),
       'horaSalida': horaSalida.toIso8601String(),
@@ -41,6 +47,8 @@ class Vuelo {
       empresaName:map['empresaName'],
       numeroVueloSalida: map['numeroVueloSalida'],
       numeroVueloLlegada: map['numeroVueloLlegada'],
+      origen: map['origen'],
+      destino: map['destino'],
       fecha: DateTime.parse(map['fecha']),
       horaLlegada: DateTime.parse(map['horaLlegada']),
       horaSalida: DateTime.parse(map['horaSalida']),

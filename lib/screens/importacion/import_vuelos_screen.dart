@@ -54,33 +54,54 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
     });
 
     try {
+      // 1. Decodificar el Excel
       final excel = Excel.decodeBytes(bytes);
       setState(() => _logs.add('Excel decodificado con éxito'));
 
-      final sheetMap = excel.tables;
-      if (sheetMap.isEmpty) {
+      // 2. Obtener la primera hoja
+      if (excel.tables.isEmpty) {
         _showError('El archivo no contiene hojas');
         return;
       }
-      final sheet = sheetMap.values.first!;
-      final total = sheet.maxRows - 1;
+      final sheet = excel.tables.values.first!;
 
+      // 3. Mapeo dinámico: leer encabezados (fila 0)
+      final headerRow = sheet.row(0);
+      final headers = headerRow
+          .map((c) => c?.value.toString().trim() ?? '')
+          .toList();
+      final colIdx = <String,int>{
+        for (var i = 0; i < headers.length; i++)
+          headers[i]: i,
+      };
+      debugPrint('[ImportVuelos] Encabezados: $headers');
+
+      // 4. Procesar cada fila
+      final total = sheet.maxRows - 1;
       for (var i = 1; i <= total; i++) {
         setState(() => _logs.add('Procesando fila ${i + 1} de ${total + 1}'));
+
         try {
-          final vuelo = VueloImport.fromExcelRow(sheet.row(i), widget.selectedDate!);
+          final row = sheet.row(i);
+          // PASAMOS colIdx a fromExcelRow
+          final vuelo = VueloImport.fromExcelRow(
+            row,
+            widget.selectedDate!,
+            colIdx,
+          );
           _vuelosPreview.add(vuelo);
           debugPrint('[ImportVuelos] Agregado vuelo: ${vuelo.numeroVueloLlegada}');
         } catch (e) {
           _errores.add('Fila ${i + 1}: $e');
           debugPrint('[ImportVuelos][ERROR] Fila ${i + 1}: $e');
         }
+
         setState(() => _progress = i / total);
         await Future.delayed(const Duration(milliseconds: 50));
       }
 
       setState(() {
-        _isExpanded = false; // Contrae la card si la importación fue exitosa
+        _isExpanded = false;
         _logs.add('Procesamiento completado');
       });
 
@@ -94,6 +115,7 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
       });
     }
   }
+
 
   // ----------------------------------------
   // Selección de archivo (igual que antes)
@@ -422,22 +444,14 @@ class _ImportVuelosScreenState extends State<ImportVuelosScreen> {
           throw Exception('No se encontró la empresa: ${vuelo.empresaNombre}');
         }
 
-        debugPrint('✅ ID de empresa encontrado: $empresaId');
-        debugPrint('📊 Datos del vuelo:');
-        debugPrint('   - Empresa: ${vuelo.empresaNombre}');
-        debugPrint('   - Vuelo llegada: ${vuelo.numeroVueloLlegada}');
-        debugPrint('   - Vuelo salida: ${vuelo.numeroVueloSalida}');
-        debugPrint('   - Fecha: ${widget.selectedDate}');
-        debugPrint('   - Hora llegada: ${vuelo.horaLlegada}');
-        debugPrint('   - Hora salida: ${vuelo.horaSalida}');
-        debugPrint('   - Posición: ${vuelo.posicion}');
-
         try {
           await vueloProvider.crearVuelo(
             empresaId,
             vuelo.empresaNombre,
             vuelo.numeroVueloLlegada,
             vuelo.numeroVueloSalida,
+            vuelo.origen,
+            vuelo.destino,
             widget.selectedDate!,
             TimeOfDay.fromDateTime(vuelo.horaLlegada),
             TimeOfDay.fromDateTime(vuelo.horaSalida),

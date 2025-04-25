@@ -7,6 +7,8 @@ class VueloImport {
   String? empresaId;
   final String numeroVueloLlegada;
   final String numeroVueloSalida;
+  final String origen;
+  final String destino;
   final DateTime horaLlegada;
   final DateTime horaSalida;
   final String posicion;
@@ -17,26 +19,42 @@ class VueloImport {
     this.empresaId,
     required this.numeroVueloLlegada,
     required this.numeroVueloSalida,
+    required this.origen,
+    required this.destino,
     required this.horaLlegada,
     required this.horaSalida,
     required this.posicion,
   });
 
-  factory VueloImport.fromExcelRow(List<Data?> row, DateTime selectedDate) {
-    // row[3] y row[4] son Data? del paquete excel
-    final horaLlegada = _parseTime(row[3], selectedDate);
-    final horaSalida  = _parseTime(row[4], selectedDate);
+  factory VueloImport.fromExcelRow(
+      List<Data?> row,
+      DateTime selectedDate,
+      Map<String,int> colIdx,
+      ) {
+    String cell(String name) {
+      final idx = colIdx[name]!;
+      return row[idx]?.value.toString().trim() ?? '';
+    }
+
+    DateTime parseTime(String name) {
+      final idx = colIdx[name]!;
+      return _parseTime(row[idx], selectedDate);
+    }
 
     return VueloImport(
-      fecha: selectedDate,
-      empresaNombre: row[0]?.value.toString().trim() ?? '',
-      numeroVueloLlegada: row[1]?.value.toString().trim() ?? '',
-      numeroVueloSalida: row[2]?.value.toString().trim() ?? '',
-      horaLlegada: horaLlegada,
-      horaSalida: horaSalida,
-      posicion: row[5]?.value.toString().trim() ?? '',
+      fecha:              selectedDate,
+      empresaNombre:      cell('Nombre de Empresa'),
+      numeroVueloLlegada: cell('Vuelo Llegada'),
+      numeroVueloSalida:  cell('Vuelo Salida'),
+      origen:             cell('origen'),
+      destino:            cell('destino'),
+      horaLlegada:        parseTime('Hora Llegada'),
+      horaSalida:         parseTime('Hora Salida'),
+      posicion:           cell('Posición'),
     );
   }
+
+
 
   static DateTime _parseTime(Data? cell, DateTime date) {
     final raw = cell?.value;

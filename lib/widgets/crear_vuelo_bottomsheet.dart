@@ -26,6 +26,8 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _numVueloLlegadaController = TextEditingController();
   final _numVueloSalidaController = TextEditingController();
+  final _origenController = TextEditingController();
+  final _destinoController = TextEditingController();
   TimeOfDay? _horaLlegada;
   TimeOfDay? _horaSalida;
   String? _empresaSeleccionada;
@@ -34,7 +36,8 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   String? _posicionSeleccionada;
   final _focusVueloLlegada = FocusNode();
   final _focusVueloSalida = FocusNode();
-
+final _focusOrigen = FocusNode();
+  final _focusDestino = FocusNode();
   final _inputDecoration = InputDecoration(
     filled: true,
     fillColor: Colors.grey[100],
@@ -92,6 +95,8 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
       _empresaName = widget.vueloExistente!.empresaName;
       _numVueloLlegadaController.text = widget.vueloExistente!.numeroVueloLlegada;
       _numVueloSalidaController.text = widget.vueloExistente!.numeroVueloSalida;
+      _origenController.text = widget.vueloExistente!.origen;
+      _destinoController.text = widget.vueloExistente!.destino;
       _horaLlegada = TimeOfDay.fromDateTime(widget.vueloExistente!.horaLlegada);
       _horaSalida = TimeOfDay.fromDateTime(widget.vueloExistente!.horaSalida);
       _posicionSeleccionada = widget.vueloExistente!.posicion;
@@ -107,9 +112,12 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
   void dispose() {
     _numVueloLlegadaController.dispose();
     _numVueloSalidaController.dispose();
+    _destinoController.dispose();
+    _origenController.dispose();
     _focusVueloLlegada.dispose();
     _focusVueloSalida.dispose();
-
+     _focusOrigen.dispose();
+    _focusDestino.dispose();
     super.dispose();
   }
 
@@ -203,73 +211,116 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Número de vuelo
-              TextFormField(
-                controller: _numVueloLlegadaController,
-                focusNode: _focusVueloLlegada,
-                keyboardType: TextInputType.number,
-                decoration: _inputDecoration.copyWith(
-                  labelText: 'Número de vuelo llegada',
-                  prefixIcon: const Icon(Icons.flight_land, color: Colors.blue),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa un número de vuelo';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Número de vuelo
-              TextFormField(
-                controller: _numVueloSalidaController,
-                focusNode: _focusVueloSalida,
-                keyboardType: TextInputType.number,
-                decoration: _inputDecoration.copyWith(
-                  labelText: 'Número de vuelo salida',
-                  prefixIcon: const Icon(Icons.flight_takeoff, color: Colors.blue),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa un número de vuelo';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Hora de llegada
-              GestureDetector(
-                onTap: () => _seleccionarHora(context, true),
-                child: AbsorbPointer(
-                  child: TextFormField(
-                    decoration: _inputDecoration.copyWith(
-                      labelText: 'Hora de llegada',
-                      prefixIcon: const Icon(Icons.access_time, color: Colors.blue),
-                    ),
-                    controller: TextEditingController(
-                      text: _horaLlegada != null ? _horaLlegada!.format(context) : '',
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _numVueloLlegadaController,
+                      focusNode: _focusVueloLlegada,
+                      keyboardType: TextInputType.number,
+                      decoration: _inputDecoration.copyWith(
+                        labelText: 'Vlo llegada',
+                        prefixIcon: const Icon(Icons.flight_land, color: Colors.blue),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Ingresa número de llegada';
+                        return null;
+                      },
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _numVueloSalidaController,
+                      focusNode: _focusVueloSalida,
+                      keyboardType: TextInputType.number,
+                      decoration: _inputDecoration.copyWith(
+                        labelText: 'Vlo salida',
+                        prefixIcon: const Icon(Icons.flight_takeoff, color: Colors.blue),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Ingresa número de salida';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
-              // Hora de salida
-              GestureDetector(
-                onTap: () => _seleccionarHora(context, false),
-                child: AbsorbPointer(
-                  child: TextFormField(
-                    decoration: _inputDecoration.copyWith(
-                      labelText: 'Hora de salida',
-                      prefixIcon: const Icon(Icons.schedule, color: Colors.blue),
-                    ),
-                    controller: TextEditingController(
-                      text: _horaSalida != null ? _horaSalida!.format(context) : '',
+// 2. Fila: Origen y Destino
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _origenController,
+                      focusNode: _focusOrigen,
+                      decoration: _inputDecoration.copyWith(
+                        labelText: 'Origen',
+                        prefixIcon: const Icon(Icons.location_on, color: Colors.blue),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Ingresa origen';
+                        return null;
+                      },
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _destinoController,
+                      focusNode: _focusDestino,
+                      decoration: _inputDecoration.copyWith(
+                        labelText: 'Destino',
+                        prefixIcon: const Icon(Icons.place, color: Colors.blue),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Ingresa destino';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+// 3. Fila: Hora de llegada y hora de salida
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _seleccionarHora(context, true),
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          decoration: _inputDecoration.copyWith(
+                            labelText: 'Hora llegada',
+                            prefixIcon: const Icon(Icons.access_time, color: Colors.blue),
+                          ),
+                          controller: TextEditingController(
+                            text: _horaLlegada != null ? _horaLlegada!.format(context) : '',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _seleccionarHora(context, false),
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          decoration: _inputDecoration.copyWith(
+                            labelText: 'Hora salida',
+                            prefixIcon: const Icon(Icons.schedule, color: Colors.blue),
+                          ),
+                          controller: TextEditingController(
+                            text: _horaSalida != null ? _horaSalida!.format(context) : '',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -281,7 +332,7 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
                 ),
                 value: _posicionSeleccionada,
                 hint: const Text('Selecciona una posición'),
-                items: ['P1', 'P2', 'P3', 'P4', 'P5', 'P6']
+                items: ['P1', 'P2', 'P3', 'P4', 'P5', 'R6']
                     .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                     .toList(),
                 onChanged: (value) {
@@ -311,6 +362,8 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
                             _empresaName!,
                             _numVueloLlegadaController.text,
                             _numVueloSalidaController.text,
+                            _origenController.text,
+                            _destinoController.text,
                             widget.selectedDate ?? widget.vueloExistente!.fecha,
                             _horaLlegada!,
                             _horaSalida!,
@@ -323,6 +376,8 @@ class _CrearVueloBottomSheetState extends State<CrearVueloBottomSheet> {
                             _empresaName!,
                             _numVueloLlegadaController.text,
                             _numVueloSalidaController.text,
+                            _origenController.text,
+                            _destinoController.text,
                             widget.selectedDate ?? DateTime.now(),
                             _horaLlegada!,
                             _horaSalida!,

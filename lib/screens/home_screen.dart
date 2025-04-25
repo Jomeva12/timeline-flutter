@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:timeline/screens/timeline/timeline_screen.dart';
@@ -56,7 +57,8 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF4A90E2), Color(0xFF6EB5FF)],
+                  colors: [ Color(0xFF4A90E2), // azul pastel
+                    Color(0xFF072A4E),],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -74,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16.0),
                       child: Text(
-                        'Timeline Diarios',
+                        'Itinerarios SMR',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -91,19 +93,31 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       icon: const Icon(Icons.more_vert, color: Colors.white),
                       onSelected: (value) {
-                        if (value == 'empresas') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const EmpresasScreen()),
-                          );
+                        switch (value) {
+                          case 'empresas':
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const EmpresasScreen()),
+                            );
+                            break;
+
+                          case 'copy_url':
+                            const url = 'https://itinerarios-70663.web.app';
+                            Clipboard.setData(const ClipboardData(text: url));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('URL copiada al portapapeles')),
+                            );
+                            break;
                         }
                       },
                       itemBuilder: (context) => [
                         const PopupMenuItem(
                           value: 'empresas',
-                          child: Text('🏢 Empresa',
-                              style: TextStyle(fontSize: 14)),
+                          child: Text('🏢 Empresa', style: TextStyle(fontSize: 14)),
+                        ),
+                        const PopupMenuItem(
+                          value: 'copy_url',
+                          child: Text('📋 Copiar URL', style: TextStyle(fontSize: 14)),
                         ),
                       ],
                     ),

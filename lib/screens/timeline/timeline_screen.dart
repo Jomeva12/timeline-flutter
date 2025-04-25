@@ -50,12 +50,31 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
 
-    // Cargar datos al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToCurrentTime();
-      _cargarDatos();
+
+      // 1) Cargar las empresas
+      final empresaProvider = context.read<EmpresaProvider>();
+      empresaProvider.loadEmpresas();
+
+      // 2) Suscribirnos a los vuelos en tiempo real
+      final vueloProvider = context.read<VueloProvider>();
+      vueloProvider.listenVuelosPorFecha(widget.selectedDate);
     });
+
   }
+
+  @override
+  void dispose() {
+    // El provider cancela la suscripción en su dispose()
+    _timer.cancel();
+    _verticalScroll.dispose();
+    _scrollController.dispose();
+    _headerScrollController.dispose();
+    _gridScrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarDatos() async {
     try {
       final empresaProvider = context.read<EmpresaProvider>();
@@ -72,15 +91,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       debugPrint('❌ Error al cargar datos: $e');
     }
   }
-  @override
-  void dispose() {
-    _timer.cancel();
-    _verticalScroll.dispose();
-    _scrollController.dispose();
-    _headerScrollController.dispose();
-    _gridScrollController.dispose();
-    super.dispose();
-  }
+
 
   void _scrollToCurrentTime({int retry = 0}) {
     final now = DateTime.now();
